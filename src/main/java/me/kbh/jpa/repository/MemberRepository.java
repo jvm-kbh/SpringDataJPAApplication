@@ -1,7 +1,11 @@
 package me.kbh.jpa.repository;
 
 import me.kbh.jpa.dto.MemberDto;
+import me.kbh.jpa.dto.projection.UsernameOnlyDto;
 import me.kbh.jpa.entity.Member;
+import me.kbh.jpa.repository.projection.MemberProjection;
+import me.kbh.jpa.repository.projection.UsernameOnly;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.*;
@@ -11,7 +15,7 @@ import javax.persistence.LockModeType;
 import javax.persistence.QueryHint;
 import java.util.List;
 
-public interface MemberRepository extends JpaRepository<Member, Long> {
+public interface MemberRepository extends JpaRepository<Member, Long>, JpaSpecificationExecutor<Member> {
     List<Member> findByUsernameAndAgeGreaterThan(String username, int age);
 
     //@Query(name = "Member.findByUsername") 생략가능하고 메서드 명으로 매칭 가능하다.
@@ -102,4 +106,20 @@ public interface MemberRepository extends JpaRepository<Member, Long> {
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     List<Member> findLockByUsername(String name);
+
+    //interface closed projection
+    List<UsernameOnly> findProjectionsByUsername(String username);
+    List<UsernameOnlyDto> findProjectionsDtoByUsername(String username);
+
+    //동적 프로젝션
+    <T> List<T> findProjectionsTypeByUsername(String username, Class<T> type);
+
+    @Query(value = "select * from member where username = ?", nativeQuery = true)
+    Member findByNativeQuery(String username);
+
+    @Query(value = "SELECT m.member_id as id, m.username, t.name as teamName " +
+            "FROM member m left join team t ON m.team_id = t.team_id",
+            countQuery = "SELECT count(*) from member",
+            nativeQuery = true)
+    Page<MemberProjection> findByNativeProjection(Pageable pageable);
 }

@@ -1,14 +1,23 @@
 package me.kbh.jpa.repository;
 
+import me.kbh.jpa.dto.MemberDto;
+import me.kbh.jpa.dto.MemberNativeDto;
+import me.kbh.jpa.dto.projection.UsernameOnlyDto;
 import me.kbh.jpa.entity.Member;
 import me.kbh.jpa.entity.Team;
+import me.kbh.jpa.repository.projection.MemberProjection;
+import me.kbh.jpa.repository.projection.UsernameOnly;
+import me.kbh.jpa.spec.MemberSpec;
 import org.assertj.core.api.Assertions;
+import org.hibernate.query.NativeQuery;
+import org.hibernate.transform.Transformers;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.transaction.annotation.Transactional;
 
 import javax.persistence.EntityManager;
@@ -203,5 +212,106 @@ public class MemberRepositoryTest {
         System.out.println("findMember.getLastModifiedBy = " + findMember.getLastModifiedBy());
         System.out.println("findMember.getCreatedDate = " + findMember.getCreatedDate());
         System.out.println("findMember.getLastModifiedDate = " + findMember.getLastModifiedDate());
+    }
+
+    @Test
+    public void specBasic() throws Exception {
+        //given
+        Team teamA = new Team("teamA");
+        em.persist(teamA);
+        Member m1 = new Member("m1", 0, teamA);
+        Member m2 = new Member("m2", 0, teamA);
+        em.persist(m1);
+        em.persist(m2);
+        em.flush();
+        em.clear();
+        //when
+        Specification<Member> spec =
+                MemberSpec.username("m1").and(MemberSpec.teamName("teamA"));
+        List<Member> result = memberRepository.findAll(spec);
+        //then
+        Assertions.assertThat(result.size()).isEqualTo(1);
+    }
+
+    @Test
+    public void projections() throws Exception {
+        //given
+        Team teamA = new Team("teamA");
+
+        em.persist(teamA);
+
+        Member m1 = new Member("m1", 0, teamA);
+        Member m2 = new Member("m2", 0, teamA);
+
+        em.persist(m1);
+        em.persist(m2);
+        em.flush();
+        em.clear();
+
+        //when
+        List<UsernameOnly> result =
+                memberRepository.findProjectionsByUsername("m1");
+
+        for (UsernameOnly usernameOnly : result) {
+            System.out.println("interface open projection usernameOnly.getUsername() = " + usernameOnly.getUsername());
+        }
+
+        List<UsernameOnlyDto> result2 =
+                memberRepository.findProjectionsDtoByUsername("m1");
+
+        for (UsernameOnlyDto UsernameOnlyDto : result2) {
+            System.out.println("class projection UsernameOnlyDto.getUsername() = " + UsernameOnlyDto.getUsername());
+        }
+
+        List<UsernameOnlyDto> result3 =
+                memberRepository.findProjectionsTypeByUsername("m1", UsernameOnlyDto.class);
+
+        for (UsernameOnlyDto UsernameOnlyDto : result3) {
+            System.out.println("dynamic projection UsernameOnlyDto.getUsername = " + UsernameOnlyDto.getUsername());
+        }
+
+        //then
+        Assertions.assertThat(result.size()).isEqualTo(1);
+        Assertions.assertThat(result2.size()).isEqualTo(1);
+        Assertions.assertThat(result3.size()).isEqualTo(1);
+    }
+
+    @Test
+    public void navtiveTest() throws Exception {
+        //given
+        Team teamA = new Team("teamA");
+
+        em.persist(teamA);
+
+        Member m1 = new Member("m1", 0, teamA);
+
+        em.persist(m1);
+        em.flush();
+        em.clear();
+
+        //when
+        Member result = memberRepository.findByNativeQuery("m1");
+        System.out.println("native result = " + result.getUsername());
+
+        Page<MemberProjection> result2 = memberRepository.findByNativeProjection(PageRequest.of(0,10));
+        List<MemberProjection> getContent = result2.getContent();
+
+        getContent.forEach( mp -> {
+            System.out.println("member projection and native query = " + mp.getUsername());
+            System.out.println("member projection and native query = " + mp.getTeamName());
+        });
+
+        //동적 네이티브 쿼리
+        String sql = "select m.username as username from member m";
+        List<MemberNativeDto> result3 = em.createNativeQuery(sql)
+                .setFirstResult(0)
+                .setMaxResults(10)
+                .unwrap(NativeQuery.class)
+                .addScalar("username")
+                .setResultTransformer(Transformers.aliasToBean(MemberDto.class))
+                .getResultList();
+
+        System.out.println("dynamic native query : " +result3.get(0).getUsername());
+
     }
 }
