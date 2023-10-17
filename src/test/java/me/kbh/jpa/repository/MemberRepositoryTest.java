@@ -117,19 +117,52 @@ public class MemberRepositoryTest {
         //given
         //member1 -> teamA
         //member2 -> teamB
+
         Team teamA = new Team("teamA");
         Team teamB = new Team("teamB");
+
         teamRepository.save(teamA);
         teamRepository.save(teamB);
+
         memberRepository.save(new Member("member1", 10, teamA));
         memberRepository.save(new Member("member2", 20, teamB));
+
         em.flush();
         em.clear();
+
         //when
         List<Member> members = memberRepository.findAll();
+
         //then
         for (Member member : members) {
             member.getTeam().getName();
         }
+    }
+
+    @Test
+    public void queryHint() throws Exception {
+        //given
+        memberRepository.save(new Member("member1", 10));
+
+        em.flush();
+        em.clear();
+
+        //when
+        Member member = memberRepository.findReadOnlyByUsername("member1");
+        member.setUsername("member2");
+
+        em.flush(); //Update Query 실행X
+    }
+
+    @Test void queryLock() throws Exception {
+        //given
+        Member member1 = new Member("member1", 10);
+        memberRepository.save(member1);
+
+        em.flush();
+        em.clear();
+
+        //when
+        List<Member> memberList = memberRepository.findLockByUsername("member1");
     }
 }
