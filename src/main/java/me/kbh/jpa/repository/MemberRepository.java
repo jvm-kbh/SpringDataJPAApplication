@@ -2,6 +2,10 @@ package me.kbh.jpa.repository;
 
 import me.kbh.jpa.dto.MemberDto;
 import me.kbh.jpa.entity.Member;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Slice;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -21,8 +25,7 @@ public interface MemberRepository extends JpaRepository<Member, Long> {
     @Query("select m.username from Member m")
     List<String> findUsernameList();
 
-    @Query("select new me.kbh.jpa.dto.MemberDto(m.id, m.username, t.name) " +
-            "from Member m join m.team t")
+    @Query("select new me.kbh.jpa.dto.MemberDto(m.id, m.username, t.name) from Member m join m.team t")
     List<MemberDto> findMemberDto();
 
     @Query("select m from Member m where m.username = :name")
@@ -37,4 +40,21 @@ public interface MemberRepository extends JpaRepository<Member, Long> {
     //Member findByUsername(String name);
     //단건 Optional
     //Optional<Member> findByUsername(String name);
+
+    //count 쿼리 사용
+    //Page<Member> findByUsername(String name, Pageable pageable);
+
+    //count 쿼리 사용 안함
+    //Slice<Member> findByUsername(String name, Pageable pageable);
+
+    //count 쿼리 사용 안함
+    //List<Member> findByUsername(String name, Pageable pageable);
+    //List<Member> findByUsername(String name, Sort sort);
+
+    Page<Member> findByAge(int age, Pageable pageable);
+
+    //count query를 분리할 수 있다.
+    @Query(value = "select m from Member m",
+           countQuery = "select count(m.username) from Member m")
+    Page<Member> findMemberAllCountBy(Pageable pageable);
 }
