@@ -1,6 +1,9 @@
 package me.kbh.jpa.entity;
 
 import lombok.*;
+import me.kbh.jpa.entity.base.BaseEntity;
+import me.kbh.jpa.entity.base.BaseTimeEntity;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import javax.persistence.*;
 import java.util.ArrayList;
@@ -11,7 +14,7 @@ import java.util.List;
 @Setter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @ToString(of = {"id", "name"})
-public class Team {
+public class Team extends BaseEntity {
     @Id
     @GeneratedValue
     @Column(name = "team_id")
